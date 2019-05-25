@@ -4,13 +4,31 @@
 --- DateTime: 2019-05-25 16:53
 ---
 
+local function proxy_kvo_key(trackKey)
+    return ("_kvo_" .. trackKey)
+end
+
+local function proxy_addObserverCallbackForKey(proxy, key, callback)
+    if not key or not proxy.realTarget then
+        return
+    end
+
+    local kvokey = proxy_kvo_key(key)
+    local callbackFuncs = proxy[kvokey]
+    if not callbackFuncs then
+        callbackFuncs = {}
+        proxy[kvokey] = callbackFuncs
+    end
+    table.insert(callbackFuncs, callback)
+end
+
 --[[
 	valueChangeFunc(key, oldValue, newValue)
 	http://lua-users.org/wiki/GeneralizedPairsAndIpairs
 ]]--
-function lua_kvo(tbl, trackKey, valueChangeFunc)
+function kvo_addForKey(tbl, trackKey, valueChangeFunc)
     if not tbl or type(tbl) ~= "table" then
-        assert(NO, "目前只支持监听table")
+        assert(NO, "只支持监听table")
         return tbl
     end
 
@@ -18,7 +36,15 @@ function lua_kvo(tbl, trackKey, valueChangeFunc)
         assert(trackKey, "监听的key或者index不能为nil")
     end
 
+    --说明当前的tbl就是proxy
+    if tbl.realTarget then
+        proxy_addObserverCallbackForKey(tbl, trackKey, valueChangeFunc)
+        return tbl
+    end
+
     local proxy = {}
+
+    proxy_addObserverCallbackForKey(proxy, trackKey, valueChangeFunc)
 
     local proxy_metable = {
         __index = function(_, k)
@@ -33,8 +59,11 @@ function lua_kvo(tbl, trackKey, valueChangeFunc)
             local oldValue = tbl[k]
             tbl[k] = v
 
-            if valueChangeFunc and trackKey == k then
-                valueChangeFunc(k, oldValue, v)
+            local kvokey = proxy_kvo_key(k)
+            if proxy[kvokey] then
+                for i, callback in ipairs(proxy[kvokey]) do
+                    callback(k, oldValue, v)
+                end
             end
             --print("lua_kvo => set, key = ", k, "oldValue = ", oldValue, "newValue = ", v)
         end,
@@ -67,8 +96,29 @@ function lua_kvo(tbl, trackKey, valueChangeFunc)
 
     setmetatable(proxy, proxy_metable)
 
+    proxy.realTarget = tbl
+
     return proxy
 end
+
+
+function kvo_removeForKey(proxy, key)
+    if not key or not proxy then
+        return
+    end
+
+    local kvokey = proxy_kvo_key(key)
+    local callbackFuncs = proxy[kvokey]
+    if callbackFuncs then
+        local count = #callbackFuncs
+        for i = 1, count do
+            table.remove(callbackFuncs)
+        end
+    end
+    proxy[kvokey] = nil;
+end
+
+
 
 --[[
 -- 测试代码
@@ -84,24 +134,25 @@ end
 newTable = _class:new()
 newTable.key = "100"
 newTable.name = "zero"
---newTable[1] = 334
---newTable[2] = 2535
-newTable = track(newTable, "key", function(k, oldV, newV)
+newTable[1] = 334
+newTable = kvo_addForKey(newTable, "1", function(k, oldV, newV)
 	print("第一", k, oldV, newV)
 end)
 newTable.key = 1123
---newTable[1] = "wggagsd"
+newTable[1] = "卡卡高可靠"
 
-newTable = track(newTable, "a", function(k, oldV, newV)
-	print("第2️⃣", k, oldV, newV)
+newTable = kvo_addForKey(newTable, 1, function(k, oldV, newV)
+	print("第二", k, oldV, newV)
 end)
-newTable.a = "a"
-newTable.b = "ssss"
-newTable.a = "weaw"
+newTable[1] = "nil"
+newTable.key = "ssssss"
 
---for i, v in ipairs(newTable) do
---	print(i, v)
---end
+kvo_removeForKey(newTable, "1")
+
+newTable[1] = "看看能否监听到"
+
+newTable.key = "价格"
+
 
 return _class
 ]]--
