@@ -8,13 +8,14 @@
 	valueChangeFunc(key, oldValue, newValue)
 	http://lua-users.org/wiki/GeneralizedPairsAndIpairs
 ]]--
-function lua_kvo(tbl, valueChangeFunc)
-    if not tbl then
-        return
+function lua_kvo(tbl, trackKey, valueChangeFunc)
+    if not tbl or type(tbl) ~= "table" then
+        assert(NO, "目前只支持监听table")
+        return tbl
     end
 
     if not trackKey then
-        assert(trackKey, "你想监听的key为nil，推荐以`table[key]`的形式设置")
+        assert(trackKey, "监听的key或者index不能为nil")
     end
 
     local proxy = {}
@@ -32,7 +33,7 @@ function lua_kvo(tbl, valueChangeFunc)
             local oldValue = tbl[k]
             tbl[k] = v
 
-            if valueChangeFunc then
+            if valueChangeFunc and trackKey == k then
                 valueChangeFunc(k, oldValue, v)
             end
             --print("lua_kvo => set, key = ", k, "oldValue = ", oldValue, "newValue = ", v)
@@ -47,9 +48,10 @@ function lua_kvo(tbl, valueChangeFunc)
         end,
 
         __ipairs = function()
-            local function iter(tbl, i)
+            local function iter(t, i)
                 i = i + 1
-                local v = tbl[i]
+                local v = t[i]
+                --v = nil时循环结束
                 if v then
                     return i, v
                 end
@@ -80,18 +82,17 @@ function _class:new()
 end
 
 newTable = _class:new()
-key = "key"
 newTable.key = "100"
 newTable.name = "zero"
 --newTable[1] = 334
 --newTable[2] = 2535
-newTable = track(newTable, key, function(k, oldV, newV)
+newTable = track(newTable, "key", function(k, oldV, newV)
 	print("第一", k, oldV, newV)
 end)
 newTable.key = 1123
 --newTable[1] = "wggagsd"
 
-newTable = track(newTable, a, function(k, oldV, newV)
+newTable = track(newTable, "a", function(k, oldV, newV)
 	print("第2️⃣", k, oldV, newV)
 end)
 newTable.a = "a"
