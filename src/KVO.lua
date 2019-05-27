@@ -9,7 +9,7 @@ local function proxy_kvo_key(trackKey)
 end
 
 local function proxy_addObserverCallbackForKey(proxy, key, callback)
-    if not key or not proxy.realTarget then
+    if not key then
         return
     end
 
@@ -26,7 +26,7 @@ end
 	valueChangeFunc(key, oldValue, newValue)
 	http://lua-users.org/wiki/GeneralizedPairsAndIpairs
 ]]--
-function kvo_addForKey(tbl, trackKey, valueChangeFunc)
+function kvo_observeForKey(tbl, trackKey, valueChangeFunc)
     if not tbl or type(tbl) ~= "table" then
         assert(NO, "只支持监听table")
         return tbl
@@ -36,12 +36,13 @@ function kvo_addForKey(tbl, trackKey, valueChangeFunc)
         assert(trackKey, "监听的key或者index不能为nil")
     end
 
-    --说明当前的tbl就是proxy
-    if tbl.realTarget then
+    --说明当前的tbl就是proxy, 添加完观察者后直接返回
+    if tbl.kvo_realTarget then
         proxy_addObserverCallbackForKey(tbl, trackKey, valueChangeFunc)
         return tbl
     end
 
+    --建一个空表
     local proxy = {}
 
     proxy_addObserverCallbackForKey(proxy, trackKey, valueChangeFunc)
@@ -63,9 +64,10 @@ function kvo_addForKey(tbl, trackKey, valueChangeFunc)
             if proxy[kvokey] then
                 for i, callback in ipairs(proxy[kvokey]) do
                     callback(k, oldValue, v)
+                    --print("lua_kvo => key = ", k, "oldValue = ", oldValue, "newValue = ", v)
                 end
             end
-            --print("lua_kvo => set, key = ", k, "oldValue = ", oldValue, "newValue = ", v)
+
         end,
 
         __pairs = function()
@@ -96,13 +98,13 @@ function kvo_addForKey(tbl, trackKey, valueChangeFunc)
 
     setmetatable(proxy, proxy_metable)
 
-    proxy.realTarget = tbl
+    proxy.kvo_realTarget = tbl
 
     return proxy
 end
 
 
-function kvo_removeForKey(proxy, key)
+function kvo_removeObserveForKey(proxy, key)
     if not key or not proxy then
         return
     end
@@ -125,32 +127,29 @@ end
 local _class = {}
 
 function _class:new()
-	local class = {}
-	class["key"] = "value"
-	setmetatable(class, self)
-	return self
+    local class = {}
+    class["key"] = "value"
+    setmetatable(class, self)
+    return self
 end
 
 newTable = _class:new()
 newTable.key = "100"
-newTable.name = "zero"
 newTable[1] = 334
-newTable = kvo_addForKey(newTable, "1", function(k, oldV, newV)
-	print("第一", k, oldV, newV)
+newTable = kvo_observeForKey(newTable, "key", function(k, oldV, newV)
+    print("第一", k, oldV, newV)
 end)
 newTable.key = 1123
 newTable[1] = "卡卡高可靠"
 
-newTable = kvo_addForKey(newTable, 1, function(k, oldV, newV)
-	print("第二", k, oldV, newV)
+newTable = kvo_observeForKey(newTable, "key", function(k, oldV, newV)
+    print("第二", k, oldV, newV)
 end)
 newTable[1] = "nil"
 newTable.key = "ssssss"
 
-kvo_removeForKey(newTable, "1")
-
+kvo_removeObserveForKey(newTable, "key")
 newTable[1] = "看看能否监听到"
-
 newTable.key = "价格"
 
 
