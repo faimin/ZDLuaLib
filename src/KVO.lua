@@ -22,6 +22,16 @@ local function proxy_addObserverCallbackForKey(proxy, key, callback)
     table.insert(callbackFuncs, callback)
 end
 
+--以`.`来分割keyPath字符串
+local function splitKeyPathWithDot(keypath)
+    assert(type(keypath) == "string")
+    local words = {}
+    for s in string.gmatch(keypath, "[^.]+") do
+        table.insert(words, s)
+    end
+    return words
+end
+
 --[[
 	valueChangeFunc(key, oldValue, newValue)
 	http://lua-users.org/wiki/GeneralizedPairsAndIpairs
@@ -32,18 +42,47 @@ function kvo_observeForKey(tbl, trackKey, valueChangeFunc)
         return tbl
     end
 
-    if not trackKey then
-        assert(trackKey, "监听的key或者index不能为nil")
+    if type(trackKey) == "number" then
+        trackKey = tostring(trackKey)
+    end
+
+    local keys = splitKeyPathWithDot(trackKey)
+    --移除并获取最后的key
+    trackKey = table.remove(keys)
+
+    local lastSecondTbl = tbl
+    local lastKey = nil
+    for i, v in ipairs(keys) do
+        local index = i
+        if i > 1 then
+            index = i - 1
+        end
+        assert(type(tbl) == "table", string.format("keypath 中的 %s 不是table", keys[index]))
+
+        tbl = tbl[v]
+
+        if i == #keys - 1 then
+            lastSecondTbl = tbl
+        elseif i == #keys then
+            lastKey = v
+        end
     end
 
     --说明当前的tbl就是proxy, 添加完观察者后直接返回
-    if tbl.kvo_realTarget then
+    if tbl.is_kvo_proxy then
         proxy_addObserverCallbackForKey(tbl, trackKey, valueChangeFunc)
         return tbl
     end
 
     --建一个空表
-    local proxy = {}
+    local proxy = {
+        is_kvo_proxy = true
+    }
+
+    --更新上一级的表的关系
+    if lastSecondTbl and lastKey then
+        lastSecondTbl[lastKey] = proxy
+    end
 
     proxy_addObserverCallbackForKey(proxy, trackKey, valueChangeFunc)
 
@@ -64,10 +103,9 @@ function kvo_observeForKey(tbl, trackKey, valueChangeFunc)
             if proxy[kvokey] then
                 for i, callback in ipairs(proxy[kvokey]) do
                     callback(k, oldValue, v)
-                    --print("lua_kvo => key = ", k, "oldValue = ", oldValue, "newValue = ", v)
+                    --print("lua_kvo => set, key = ", k, "oldValue = ", oldValue, "newValue = ", v)
                 end
             end
-
         end,
 
         __pairs = function()
@@ -98,8 +136,6 @@ function kvo_observeForKey(tbl, trackKey, valueChangeFunc)
 
     setmetatable(proxy, proxy_metable)
 
-    proxy.kvo_realTarget = tbl
-
     return proxy
 end
 
@@ -107,6 +143,23 @@ end
 function kvo_removeObserveForKey(proxy, key)
     if not key or not proxy then
         return
+    end
+
+    if type(key) == "number" then
+        key = tostring(key)
+    end
+
+    local keys = splitKeyPathWithDot(key)
+    --移除并获取最后的key
+    key = table.remove(keys)
+
+    for i, v in ipairs(keys) do
+        local index = i
+        if i > 1 then
+            index = i - 1
+        end
+        assert(type(proxy) == "table", string.format("keypath 中的 %s 不是table", keys[index]))
+        proxy = proxy[v]
     end
 
     local kvokey = proxy_kvo_key(key)
@@ -123,35 +176,65 @@ end
 
 
 --[[
--- 测试代码
 local _class = {}
 
 function _class:new()
-    local class = {}
-    class["key"] = "value"
-    setmetatable(class, self)
-    return self
+	local class = {}
+	class["key"] = "value"
+	setmetatable(class, self)
+	return self
 end
 
+local tbl = {
+	person = {
+		boy = {
+			name = {
+				n = "小明"
+			}
+		}
+	}
+}
+
 newTable = _class:new()
+
 newTable.key = "100"
-newTable[1] = 334
 newTable = kvo_observeForKey(newTable, "key", function(k, oldV, newV)
-    print("第一", k, oldV, newV)
+	print("第一", k, oldV, newV)
 end)
 newTable.key = 1123
-newTable[1] = "卡卡高可靠"
+
+function _class:addObj()
+	self.key = "addObject"
+end
 
 newTable = kvo_observeForKey(newTable, "key", function(k, oldV, newV)
-    print("第二", k, oldV, newV)
+	print("第二", k, oldV, newV)
 end)
-newTable[1] = "nil"
 newTable.key = "ssssss"
 
-kvo_removeObserveForKey(newTable, "key")
-newTable[1] = "看看能否监听到"
-newTable.key = "价格"
+newTable:addObj()
 
+kvo_removeObserveForKey(newTable, "key")
+newTable.key = "看看能否监听到"
+
+
+newTable.tbl = tbl
+local tblProxy1 = kvo_observeForKey(newTable.tbl.person.boy.name, "n", function(k, oldV, newV)
+	print("keyPath监听结果1 = ", k, oldV, newV)
+end)
+--如果keyPath只有一个key时,必须要替换原来的table
+newTable.tbl.person.boy.name = tblProxy1
+local tblProxy2 = kvo_observeForKey(newTable.tbl.person, "boy.name.n", function(k, oldV, newV)
+	print("keyPath监听结果2 = ", k, oldV, newV)
+end)
+kvo_observeForKey(newTable.tbl, "person.boy", function(k, oldV, newV)
+	print("keyPath监听结果3 = ", k, oldV, newV)
+end)
+newTable.tbl.person.boy.name.n = "鸿鸿"
+
+kvo_removeObserveForKey(newTable.tbl.person.boy, "name.n")
+newTable.tbl.person.boy.name.n = "删除了吗？"
+newTable.tbl.person.boy = {}
 
 return _class
 ]]--
