@@ -33,7 +33,16 @@ local function observer(self, resolveFunc, rejectFunc)
     --promise已经fulfilled时直接回
     if resolveFunc then
         if self.state == PromiseState.fulfilled then
-            newPromise:fulfill(resolveFunc(self.value))
+            --如果返回的还是promise
+            if type(self.value) == "table" and self.value.isPromise == true then
+                observer(self.value, function(v)
+                    newPromise:fulfill(resolveFunc(v))
+                end, function(e)
+                    newPromise:reject(e)
+                end)
+            else
+                newPromise:fulfill(resolveFunc(self.value))
+            end
         elseif self.state == PromiseState.rejected then
             --thenNext时也要把错误值往下传递,因为后面也许会有catch操作,不传递的话数据链就断了
             newPromise:reject(self.error)
@@ -45,11 +54,22 @@ local function observer(self, resolveFunc, rejectFunc)
                 newPromise:reject(error) --值不进行map操作,直接往下传递
             end)
         end
-    elseif rejectFunc then
+    end
+
+    if rejectFunc then
         if self.state == PromiseState.rejected then
             newPromise:reject(rejectFunc(self.error))
         elseif self.state == PromiseState.fulfilled then
-            newPromise:fulfill(self.value)
+            --如果返回的是promise
+            if type(self.value) == "table" and self.value.isPromise == true then
+                observer(self.value, function(v)
+                    newPromise:fulfill(v)	--往下传递
+                end, function(e)
+                    newPromise:reject(rejectFunc(e))
+                end)
+            else
+                newPromise:fulfill(self.value)
+            end
         else
             table.insert(self.observers.resultObservers, function(value)
                 newPromise:fulfill(value)
@@ -58,8 +78,6 @@ local function observer(self, resolveFunc, rejectFunc)
                 newPromise:reject(rejectFunc(error))
             end)
         end
-    else
-        assert("callBack can't be nil")
     end
 
     return newPromise
@@ -103,7 +121,7 @@ function Promise:async(promiseFunc)
     return self
 end
 
-function Promise:next(resultFunc)
+function Promise:thenNext(resultFunc)
     return observer(self, resultFunc, nil)
 end
 
@@ -150,15 +168,7 @@ function Promise:all(promises)
 
                 table.insert(resultArray, value)
                 resolve(resultArray)
-            end, nil)
-
-            observer(v, nil, function (error)
-                for _, vv in ipairs(promises) do
-                    if vv.state ~= PromiseState.rejected then
-                        return
-                    end
-                end
-
+            end, function (error)
                 reject(error)
             end)
         end
@@ -168,3 +178,75 @@ function Promise:all(promises)
 end
 
 return Promise
+
+
+
+--[[
+-- 测试代码
+local _class = {}
+
+function _class:new()
+	local class = {}
+	class["key"] = "value"
+	setmetatable(class, self)
+	return self
+end
+
+local promise1 = Promise:new():async(function(fulfill, reject)
+	fulfill(100)
+--	reject("❌")
+end):thenNext(function(value)
+	return value * 2  	-- value = 100
+end):catch(function(error)
+	print(error) 		-- errorxxxx
+end):thenNext(function(value)
+	print(value)  		-- 200
+	return value / 100 	-- 2
+end)
+
+local promise2 = Promise:new():async(function(fulfill, reject)
+	fulfill(2300)
+end)
+
+local promise3 = Promise:new():async(function(fulfill, reject)
+--	fulfill("你好")
+	reject("❌")
+end)
+
+Promise:new():all({ promise1, promise2, promise3 }):thenNext(function(value)
+    return value
+end):catch(function(error)
+    print(error)
+end):thenNext(function(value)
+    for i, v in ipairs(value) do
+        print(i, v)
+        --print result is:
+        --1	2
+        --2	2300
+        --3	你好
+    end
+end)
+
+--支持内部返回promise的处理
+promise:new():async(function(fulfill, reject)
+    local p = promise:new():async(function(_fulfill, _reject)
+        --		_fulfill("内部完成")
+        _reject("内部错误")
+    end)
+    fulfill(p)
+end):thennext(function(v)
+    print("zzzz", v)
+    return v .. "你好"
+end):catch(function(e)
+    local errortext = "catch结果 = " .. e
+    return errortext
+end):thennext(function(v)
+    print("thennext外部结果 = ", v)
+end):catch(function(e)
+    print("error", e)
+end)
+
+
+return _class
+
+]]--
