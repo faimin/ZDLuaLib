@@ -12,8 +12,8 @@ PromiseState = {
     rejected = 2,
 }
 
-function Promise:new(o)
-    o = o or {}
+function Promise:new()
+    o = {}
     o = setmetatable(o, self)
     self.__index = self
     o.observers = {
@@ -27,6 +27,7 @@ function Promise:new(o)
     return o
 end
 
+--- 核心方法
 local function observer(self, resolveFunc, rejectFunc)
     local newPromise = Promise:new()
 
@@ -228,25 +229,28 @@ end):thenNext(function(value)
 end)
 
 --支持内部返回promise的处理
-promise:new():async(function(fulfill, reject)
-    local p = promise:new():async(function(_fulfill, _reject)
-        --		_fulfill("内部完成")
-        _reject("内部错误")
+Promise:new():async(function(fulfill, reject)
+    local p = Promise:new():async(function(_fulfill, _reject)
+        _fulfill("1")
+        --_reject("-1")
     end)
     fulfill(p)
-end):thennext(function(v)
-    print("zzzz", v)
-    return v .. "你好"
+end):thenNext(function(v)
+    local p = Promise:new():async(function(_fulfill, _reject)
+        _fulfill(v .. " 10000000")
+        --_reject("内部错误")
+    end)
+    return p
 end):catch(function(e)
     local errortext = "catch结果 = " .. e
     return errortext
-end):thennext(function(v)
-    print("thennext外部结果 = ", v)
+end):thenNext(function(v)
+    print("thenNext结果 = ", v)
 end):catch(function(e)
-    print("error", e)
+    print("最后的error", e)
 end)
 
 
 return _class
 
-]]--
+--]]
