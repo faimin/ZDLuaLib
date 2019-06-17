@@ -5,6 +5,11 @@
 --- Class Introduce: Promise
 
 local Promise = {}
+setmetatable(Promise, {
+    __call = function( ... )
+        return Promise:new( ... )
+    end
+})
 
 PromiseState = {
     pending = 0,
@@ -229,14 +234,14 @@ end):thenNext(function(value)
 end)
 
 --支持内部返回promise的处理
-Promise:new():async(function(fulfill, reject)
-    local p = Promise:new():async(function(_fulfill, _reject)
+Promise():async(function(fulfill, reject)
+    local p = Promise():async(function(_fulfill, _reject)
         _fulfill("1")
         --_reject("-1")
     end)
     fulfill(p)
 end):thenNext(function(v)
-    local p = Promise:new():async(function(_fulfill, _reject)
+    local p = Promise():async(function(_fulfill, _reject)
         _fulfill(v .. " 10000000")
         --_reject("内部错误")
     end)
