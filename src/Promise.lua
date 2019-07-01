@@ -5,11 +5,11 @@
 --- Class Introduce: Promise
 
 local Promise = {}
-setmetatable(Promise, {
-    __call = function( ... )
-        return Promise:new( ... )
-    end
-})
+local met = {}
+function met:__call( ... )
+    return Promise:new( ... )
+end
+setmetatable(Promise, met)
 
 PromiseState = {
     pending = 0,
