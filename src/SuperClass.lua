@@ -39,6 +39,11 @@ function SuperClass:new( ... )
 end
 
 --测试代码
+-- function SuperClass:setup()
+--     print("父类setup方法")
+--     return self
+-- end
+
 -- local Object = SuperClass()
 -- print("object = ", Object)
 -- function Object:new( ... )
@@ -46,11 +51,16 @@ end
 --         print("子类参数:", i, v)
 --     end
 --     print("子new方法执行了")
---     return "ret结果"
+--     return self
 -- end
 
 -- local x = Object("1", "2", "3")
 -- print("newObj = ", x)
--- print("print = ", x)
+-- print("子类未实现的方法：", x:setup())
+
+-- local xx = setmetatable({}, x)
+-- xx.__index = xx
+-- print("newnewObj = ", xx)
+-- print("子类未实现的方法：", xx:setup())
 
 return SuperClass()
