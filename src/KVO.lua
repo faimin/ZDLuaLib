@@ -38,7 +38,7 @@ end
 ]]--
 function kvo_observeForKey(tbl, trackKey, valueChangeFunc)
     if not tbl or type(tbl) ~= "table" then
-        assert(NO, "只支持监听table")
+        assert(false, "只支持监听table")
         return tbl
     end
 
