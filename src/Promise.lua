@@ -183,6 +183,38 @@ function Promise:all(promises)
     return newPromise
 end
 
+function Promise:finish(promises)
+    if (not promises or #promises == 0) then return nil end
+
+    local newPromise = self:async(function (resolve, reject)
+        local resultArray = {}
+        local errorArray = {}
+        for i, v in ipairs(promises) do
+            observer(v,function (value)
+                for _, vv in ipairs(promises) do
+                    if vv.state == PromiseState.pending then
+                        return
+                    end
+                end
+                table.insert(resultArray, value)
+                resolve(resultArray)
+            end, function (error)
+                table.insert(resultArray, error)
+                --所有的promise都失败时才会回调
+                for _, vv in ipairs(promises) do
+                    if vv.state ~= PromiseState.rejected then
+                        return
+                    end
+                end
+                table.insert(errorArray, error)
+                reject(errorArray)
+            end)
+        end
+    end)
+
+    return newPromise
+end
+
 return Promise
 
 
@@ -230,6 +262,18 @@ end):thenNext(function(value)
         --1	2
         --2	2300
         --3	你好
+    end
+end)
+
+Promise():finish({ promise1, promise2, promise3 }):thenNext(function(value)
+    print("第一个next")
+    return value
+end):catch(function(error)
+    print("都错了", error)
+end):thenNext(function(value)
+    print("来结果了。。。")
+    for i, v in ipairs(value) do
+        print(i, v)
     end
 end)
 

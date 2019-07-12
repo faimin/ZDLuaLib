@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="1a58649c-9740-40bb-9258-e87f08855c48" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/src/SuperClass.lua" beforeDir="false" afterPath="$PROJECT_DIR$/src/SuperClass.lua" afterDir="false" />
-    </list>
+    <list default="true" id="1a58649c-9740-40bb-9258-e87f08855c48" name="Default Changelist" comment="" />
     <ignored path="$PROJECT_DIR$/out/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -37,8 +35,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/SuperClass.lua">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="240">
-              <caret line="53" column="4" lean-forward="true" selection-start-line="53" selection-start-column="4" selection-end-line="53" selection-end-column="4" />
+            <state relative-caret-position="174">
+              <caret line="48" column="4" lean-forward="true" selection-start-line="48" selection-start-column="4" selection-end-line="48" selection-end-column="4" />
             </state>
           </provider>
         </entry>
@@ -83,7 +81,7 @@
   </component>
   <component name="ProjectFrameBounds">
     <option name="x" value="1697" />
-    <option name="y" value="30" />
+    <option name="y" value="28" />
     <option name="width" value="1685" />
     <option name="height" value="957" />
   </component>
@@ -147,7 +145,7 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="1697" y="30" width="1685" height="957" extended-state="0" />
+    <frame x="1697" y="28" width="1685" height="957" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.17711504" />
@@ -218,8 +216,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/SuperClass.lua">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="240">
-          <caret line="53" column="4" lean-forward="true" selection-start-line="53" selection-start-column="4" selection-end-line="53" selection-end-column="4" />
+        <state relative-caret-position="174">
+          <caret line="48" column="4" lean-forward="true" selection-start-line="48" selection-start-column="4" selection-end-line="48" selection-end-column="4" />
         </state>
       </provider>
     </entry>
