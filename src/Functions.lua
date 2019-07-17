@@ -43,7 +43,9 @@ end
 ---@param separateString string
 ---@return table
 function string.split(text, separateString)
-    if not separateString then return text end
+    if not separateString then
+        return { text }
+    end
 
     local patten = "[^" .. separateString .. "]+"
     local words = {}
