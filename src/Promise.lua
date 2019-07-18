@@ -166,15 +166,18 @@ function Promise:all(promises)
         local resultArray = {}
         for i, v in ipairs(promises) do
             observer(v,function (value)
+                table.insert(resultArray, value)
+
                 for _, vv in ipairs(promises) do
                     if vv.state ~= PromiseState.fulfilled then
                         return
                     end
                 end
 
-                table.insert(resultArray, value)
+                --没有错误的时候才会回调
                 resolve(resultArray)
             end, function (error)
+                --如果出现错误立即reject
                 reject(error)
             end)
         end
@@ -191,22 +194,27 @@ function Promise:finish(promises)
         local errorArray = {}
         for i, v in ipairs(promises) do
             observer(v,function (value)
+                table.insert(resultArray, value)
+
                 for _, vv in ipairs(promises) do
                     if vv.state == PromiseState.pending then
                         return
                     end
                 end
-                table.insert(resultArray, value)
+
                 resolve(resultArray)
             end, function (error)
                 table.insert(resultArray, error)
+
                 --所有的promise都失败时才会回调
                 for _, vv in ipairs(promises) do
                     if vv.state ~= PromiseState.rejected then
                         return
                     end
                 end
+
                 table.insert(errorArray, error)
+
                 reject(errorArray)
             end)
         end
