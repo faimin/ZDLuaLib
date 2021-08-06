@@ -33,6 +33,87 @@ function table.filter(t, fn)
     return t
 end
 
+local output_value = function(value)
+    if not value then
+        return "nil"
+    end
+
+    local str, value_type
+    value_type = type(value)
+    if value_type == "number" then
+        if (math.floor(value) < value) then
+            str = string.format("[ %f ]n", tostring(value))
+        else
+            str = string.format("[ %d ]n", tostring(value))
+        end
+    elseif value_type == "string" then
+        str = string.format("[ \"%s\" ]s", value)
+    elseif value_type == "boolean" then
+        str = string.format("[ \"%s\" ]b", tostring(value))
+    elseif value_type == "table" then
+        str = string.format("[ 0x%s ]t", string.sub(tostring(value), 8))
+    elseif value_type == "function" then
+        str = string.format("[ 0x%s ]f", string.sub(tostring(value), 11))
+    elseif value_type == "userdata" then
+        str = string.format("[ 0x%s ]u", string.sub(tostring(value), 11))
+    else
+        str = string.format("[ \"%s\" ]%s", tostring(value), type(value))
+    end
+
+    return str
+end
+
+function table.print(t, tname)
+    if type(t) ~= "table" then
+        print("table.error() not a table")
+        return
+    end
+
+    local _deep_count = 0   -- 深度
+    local printed_tables = {}
+    local t_path = {}   -- 目录
+    local outstr = ""   -- 输出字符串
+
+    local print_one_table   -- 【关键函数】
+    print_one_table = function(tb, tb_name)
+
+        local tb_name = tb_name or "table"
+        table.insert(t_path, tb_name)
+        local tpath = ""
+        for i, pname in ipairs(t_path) do
+            tpath = tpath.."."..pname
+        end
+
+        printed_tables[tb] = tpath
+        _deep_count = _deep_count + 1
+        local str = ""
+        local tab = string.rep(" ", _deep_count*4)  --返回重复4次空格的字符串
+        outstr = outstr .. string.format("\n%s  {\n", tab);
+        for k, v in pairs(tb) do
+            if type(v) == "table" then
+                if printed_tables[v] then
+                    str = string.format("%s    %s = [ %s ]", tab, output_value(k), printed_tables[v])
+                    outstr = outstr..str.."\n"
+                else
+                    str = string.format("%s    %s = ", tab, output_value(k))
+                    outstr = outstr..str
+                    print_one_table(v, tostring(k))
+                end
+            else
+                str = string.format("%s    %s = %s", tab, output_value(k), output_value(v))
+                outstr = outstr..str.."\n"
+            end
+        end
+        outstr = outstr..tab.."  }\n"
+        table.remove(t_path)
+        _deep_count = _deep_count - 1
+    end
+
+    tname = tname or "root_table"
+    print_one_table(t, tname)
+    print(outstr)
+    printed_tables = nil
+end
 
 ----------------------------------------------------
 --- string
@@ -55,3 +136,17 @@ function string.split(text, separateString)
     return words
 end
 
+
+----------------------------------------------------
+--- function
+----------------------------------------------------
+
+--- 打印函数位置
+function log_position()
+    local info = debug.getinfo(2)
+    local line = info.currentline
+    local file = info.short_src
+    local func = info.name
+    local positionString = string.format("file = %s, line = #%d, func = %s", file, line, func)
+    print(positionString)
+end
