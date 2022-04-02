@@ -23,7 +23,7 @@ setmetatable(SuperClass, mt)
 
 function SuperClass:__call(...)
     for i, v in ipairs({...}) do
-        print("__call参数:", i, v)
+        print("__call parameter:", i, v)
     end
 
     --函数也是属于table的一部分
@@ -34,7 +34,7 @@ function SuperClass:initialize(...)
     local subClass = setmetatable({}, self)
     subClass.__index = subClass
     subClass.super = self
-    print("父类 = ", self, "子类 = ", subClass)
+    print("parent = ", self, "subclass = ", subClass)
     return subClass
 end
 
