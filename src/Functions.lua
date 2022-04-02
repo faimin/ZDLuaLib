@@ -150,3 +150,66 @@ function log_position()
     local positionString = string.format("file = %s, line = #%d, func = %s", file, line, func)
     print(positionString)
 end
+
+--- shallowCopy
+--- http://lua-users.org/wiki/CopyTable
+---@param orig table
+---@return table
+function shallowCopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in pairs(orig) do
+            copy[orig_key] = orig_value
+        end
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end
+
+--- A deep copy copies all levels (or a specific subset of levels).
+--- http://lua-users.org/wiki/CopyTable
+---@param orig table
+---@return table
+function deepCopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in next, orig, nil do
+            copy[deepCopy(orig_key)] = deepCopy(orig_value)
+        end
+        setmetatable(copy, deepCopy(getmetatable(orig)))
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end
+
+--- Save copied tables in `copies`, indexed by original table.
+--- http://lua-users.org/wiki/CopyTable
+---@param orig table
+---@param copies table
+---@return table
+function deepCopyToTable(orig, copies)
+    copies = copies or {}
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        if copies[orig] then
+            copy = copies[orig]
+        else
+            copy = {}
+            copies[orig] = copy
+            for orig_key, orig_value in next, orig, nil do
+                copy[deepCopyToTable(orig_key, copies)] = deepCopyToTable(orig_value, copies)
+            end
+            setmetatable(copy, deepCopyToTable(getmetatable(orig), copies))
+        end
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end
