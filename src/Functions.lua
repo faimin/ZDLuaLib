@@ -33,7 +33,7 @@ function table.filter(t, fn)
     return t
 end
 
-local output_value = function(value)
+local function outputValue(value)
     if not value then
         return "nil"
     end
@@ -92,15 +92,15 @@ function table.print(t, tname)
         for k, v in pairs(tb) do
             if type(v) == "table" then
                 if printed_tables[v] then
-                    str = string.format("%s    %s = [ %s ]", tab, output_value(k), printed_tables[v])
+                    str = string.format("%s    %s = [ %s ]", tab, outputValue(k), printed_tables[v])
                     outstr = outstr..str.."\n"
                 else
-                    str = string.format("%s    %s = ", tab, output_value(k))
+                    str = string.format("%s    %s = ", tab, outputValue(k))
                     outstr = outstr..str
                     print_one_table(v, tostring(k))
                 end
             else
-                str = string.format("%s    %s = %s", tab, output_value(k), output_value(v))
+                str = string.format("%s    %s = %s", tab, outputValue(k), outputValue(v))
                 outstr = outstr..str.."\n"
             end
         end
@@ -142,7 +142,7 @@ end
 ----------------------------------------------------
 
 --- 打印函数位置
-function log_position()
+function logPosition()
     local info = debug.getinfo(2)
     local line = info.currentline
     local file = info.short_src
