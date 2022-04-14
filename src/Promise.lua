@@ -17,18 +17,18 @@ PromiseState = {
     rejected = 2,
 }
 
-function Promise:new()
-    o = {}
-    o = setmetatable(o, self)
+function Promise:new( ... )
+    local o = setmetatable({
+        observers = {
+            resultObservers = {},
+            errorObservers = {}
+        },
+        value = nil,
+        error = nil,
+        state = PromiseState.pending,
+        isPromise = true
+    }, self)
     self.__index = self
-    o.observers = {
-        resultObservers = {},
-        errorObservers = {}
-    }
-    o.value = nil
-    o.error = nil
-    o.state = PromiseState.pending
-    o.isPromise = true
     return o
 end
 

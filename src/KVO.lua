@@ -36,7 +36,7 @@ end
 	valueChangeFunc(key, oldValue, newValue)
 	http://lua-users.org/wiki/GeneralizedPairsAndIpairs
 ]]--
-function kvo_observeForKey(tbl, trackKey, valueChangeFunc)
+function KVO_ObserveForKey(tbl, trackKey, valueChangeFunc)
     if not tbl or type(tbl) ~= "table" then
         assert(false, "只支持监听table")
         return tbl
@@ -140,7 +140,7 @@ function kvo_observeForKey(tbl, trackKey, valueChangeFunc)
 end
 
 
-function kvo_removeObserveForKey(proxy, key)
+function KVO_RemoveObserveForKey(proxy, key)
     if not key or not proxy then
         return
     end
@@ -198,7 +198,7 @@ local tbl = {
 newTable = _class:new()
 
 newTable.key = "100"
-newTable = kvo_observeForKey(newTable, "key", function(k, oldV, newV)
+newTable = KVO_ObserveForKey(newTable, "key", function(k, oldV, newV)
 	print("第一", k, oldV, newV)
 end)
 newTable.key = 1123
@@ -207,7 +207,7 @@ function _class:addObj()
 	self.key = "addObject"
 end
 
-newTable = kvo_observeForKey(newTable, "key", function(k, oldV, newV)
+newTable = KVO_ObserveForKey(newTable, "key", function(k, oldV, newV)
 	print("第二", k, oldV, newV)
 end)
 newTable.key = "ssssss"
@@ -219,15 +219,15 @@ newTable.key = "看看能否监听到"
 
 
 newTable.tbl = tbl
-local tblProxy1 = kvo_observeForKey(newTable.tbl.person.boy.name, "n", function(k, oldV, newV)
+local tblProxy1 = KVO_ObserveForKey(newTable.tbl.person.boy.name, "n", function(k, oldV, newV)
 	print("keyPath监听结果1 = ", k, oldV, newV)
 end)
 --如果keyPath只有一个key时,必须要替换原来的table
 newTable.tbl.person.boy.name = tblProxy1
-local tblProxy2 = kvo_observeForKey(newTable.tbl.person, "boy.name.n", function(k, oldV, newV)
+local tblProxy2 = KVO_ObserveForKey(newTable.tbl.person, "boy.name.n", function(k, oldV, newV)
 	print("keyPath监听结果2 = ", k, oldV, newV)
 end)
-kvo_observeForKey(newTable.tbl, "person.boy", function(k, oldV, newV)
+KVO_ObserveForKey(newTable.tbl, "person.boy", function(k, oldV, newV)
 	print("keyPath监听结果3 = ", k, oldV, newV)
 end)
 newTable.tbl.person.boy.name.n = "鸿鸿"
