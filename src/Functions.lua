@@ -136,6 +136,38 @@ function string.split(text, separateString)
     return words
 end
 
+---计算字符串长度，包含中文
+---@param self string
+---@return number
+function string.length(self)
+    if not self or type(self) ~= "string" then
+        return 0
+    end
+
+    local lenInByte = #self
+    local charCount = 0
+    local i = 1
+    while (i <= lenInByte) do
+        local curByte = string.byte(self, i)
+        
+        local byteCount = 1
+        if curByte > 0 and curByte <= 127 then
+            byteCount = 1                                               --1字节字符
+        elseif curByte >= 192 and curByte < 223 then
+            byteCount = 2                                               --双字节字符
+        elseif curByte >= 224 and curByte <= 239 then
+            byteCount = 3                                               --汉字
+        elseif curByte >= 240 and curByte <= 247 then
+            byteCount = 4                                               --4字节字符
+        end
+
+        local char = string.sub(self, i, i + byteCount - 1)
+        i = i + byteCount                                               -- 重置下一字节的索引
+        charCount = charCount + 1                                       -- 字符的个数（长度）
+    end
+
+    return charCount
+end
 
 ----------------------------------------------------
 --- function
