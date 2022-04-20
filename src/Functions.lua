@@ -142,7 +142,7 @@ end
 ----------------------------------------------------
 
 --- 打印函数位置
-function LogPosition()
+function LogFuncPosition()
     local info = debug.getinfo(2)
     local line = info.currentline
     local file = info.short_src
