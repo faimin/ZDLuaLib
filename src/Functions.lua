@@ -136,7 +136,33 @@ function string.split(text, separateString)
     return words
 end
 
----计算字符串长度，包含中文
+---计算字符串长度，支持中文
+---第一种实现
+---reference: https://github.com/chukong/quick-cocos2d-x/blob/master/framework/functions.lua
+---@param self string
+---@return number
+function string.utf8len(self)
+    local len  = string.len(self)
+    local left = len
+    local cnt  = 0
+    local arr  = {0, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc}
+    while left ~= 0 do
+        local tmp = string.byte(self, -left)
+        local i = #arr
+        while arr[i] do
+            if tmp >= arr[i] then
+                left = left - i
+                break
+            end
+            i = i - 1
+        end
+        cnt = cnt + 1
+    end
+    return cnt
+end
+
+---计算字符串长度，支持中文
+---第二种实现
 ---@param self string
 ---@return number
 function string.length(self)
