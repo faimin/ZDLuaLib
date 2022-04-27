@@ -6,7 +6,10 @@
 ---
 ---
 
---以`.`来分割keyPath字符串
+---以`delimiter`来分割`text`字符串
+---@param text string
+---@param delimiter string
+---@return string[]
 local function split(text, delimiter)
     assert(type(text) == "string")
     local separateStr = string.format("[^%s]+", delimiter)
@@ -17,24 +20,25 @@ local function split(text, delimiter)
     return words
 end
 
-
-local Import = {}
-
-function Import:new()
-    return self
-end
-
+---以相对路径的方式引用模块
+---@author Zero.D.Saber
+---@param relatedFilePath string
+---@return any
 function import(relatedFilePath)
-
-    if string.sub(relatedFilePath, 1, string.len(".")) ~= "." then
-        assert(false, "must start with '.'")
+    if not relatedFilePath or type(relatedFilePath) ~= "string" then
+        assert(false)
     end
 
-    -- 把后缀去掉
-    local startPosition, endPosition = string.find(relatedFilePath, ".lua")
-    if startPosition ~= nil then
-        ---把'.lua'替换成'""'
-        relatedFilePath, _ = string.gsub(relatedFilePath, ".lua", "")
+    -- 去掉lua后缀
+    local suffix = ".lua"
+    local found = string.sub(relatedFilePath, -(#suffix)) == suffix
+    if found then
+        relatedFilePath, _ = string.gsub(relatedFilePath, suffix, "")
+    end
+
+    if string.sub(relatedFilePath, 1, #(".")) ~= "." then
+        local trimPath = string.gsub(relatedFilePath, "/", ".")
+        return require(trimPath)
     end
 
     -- 找到当前文件的路径
@@ -50,7 +54,7 @@ function import(relatedFilePath)
     local reverseFilePaths = {}
     for i = #relatedArr, 1, -1 do
         local str = relatedArr[i]
-        if string.sub(str, 1, string.len(".")) ~= "." then
+        if string.sub(str, 1, #(".")) ~= "." then
             table.insert(reverseFilePaths, str)
         else
             break
@@ -63,11 +67,11 @@ function import(relatedFilePath)
 
     assert((#currentFilePathArr) >= (#relatedArr - #relatedFilePath), "相对路径错误")
 
-    --- 发现'..'则把当前文件中的路径删除，最后再把相路径中的部分拼接起来
+    -- 发现'..'则把当前文件中的路径删除，最后再把相路径中的部分拼接起来
     for i = 1, #relatedArr do
         -- 只处理以相对路径开头的路径
         local tempStr = relatedArr[i]
-        if string.sub(tempStr, 1, string.len(".")) == "." then
+        if string.sub(tempStr, 1, #(".")) == "." then
             local dotCount = #(tempStr)
             for _ = 2, dotCount do
                 table.remove(currentFilePathArr)
@@ -76,13 +80,15 @@ function import(relatedFilePath)
     end
 
     local realPath = table.concat(currentFilePathArr, ".") .. "." .. table.concat(relatedFilePaths, ".")
-    print("真实路径 = ", realPath)
+    --print("realPath = ", realPath)
 
     return require(realPath)
 end
 
+---以相对路径的方式引用模块
+---@author Zero.D.Saber
+---@param relatedFilePath string
+---@return any
 function require_relative(relatedFilePath)
     return import(relatedFilePath)
 end
-
-return Import
