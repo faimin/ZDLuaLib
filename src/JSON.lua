@@ -1,5 +1,5 @@
 --[[
-    https://github.com/sumneko/lua-language-server/blob/2c26700b45f4d0080b9f983869d1c11f9ad5407e/script/json.lua
+    https://github.com/sumneko/lua-language-server/blob/master/script/jsonc.lua
 ]]
 
 local type = type
@@ -7,7 +7,6 @@ local next = next
 local error = error
 local tonumber = tonumber
 local tostring = tostring
-local utf8_char = utf8.char
 local table_concat = table.concat
 local table_sort = table.sort
 local string_char = string.char
@@ -16,21 +15,86 @@ local string_find = string.find
 local string_match = string.match
 local string_gsub = string.gsub
 local string_sub = string.sub
+local string_rep = string.rep
 local string_format = string.format
-local math_type = math.type
 local setmetatable = setmetatable
 local getmetatable = getmetatable
 local huge = math.huge
 local tiny = -huge
 
+local utf8_char
+local math_type
+
+if _VERSION == "Lua 5.1" or _VERSION == "Lua 5.2" then
+    local math_floor = math.floor
+    function utf8_char(c)
+        if c <= 0x7f then
+            return string_char(c)
+        elseif c <= 0x7ff then
+            return string_char(math_floor(c / 64) + 192, c % 64 + 128)
+        elseif c <= 0xffff then
+            return string_char(
+                math_floor(c / 4096) + 224,
+                math_floor(c % 4096 / 64) + 128,
+                c % 64 + 128
+            )
+        elseif c <= 0x10ffff then
+            return string_char(
+                math_floor(c / 262144) + 240,
+                math_floor(c % 262144 / 4096) + 128,
+                math_floor(c % 4096 / 64) + 128,
+                c % 64 + 128
+            )
+        end
+        error(string.format("invalid UTF-8 code '%x'", c))
+    end
+    function math_type(v)
+        if v >= -2147483648 and v <= 2147483647 and math_floor(v) == v then
+            return "integer"
+        end
+        return "float"
+    end
+else
+    utf8_char = utf8.char
+    math_type = math.type
+end
+
 local json = {}
-json.object = {}
 
 json.supportSparseArray = true
 
+local objectMt = {}
+
+function json.createEmptyObject()
+    return setmetatable({}, objectMt)
+end
+
+function json.isObject(t)
+    if t[1] ~= nil then
+        return false
+    end
+    return next(t) ~= nil or getmetatable(t) == objectMt
+end
+
+if debug and debug.upvalueid then
+    -- Generate a lightuserdata
+    json.null = debug.upvalueid(json.createEmptyObject, 1)
+else
+    json.null = function() end
+end
+
 -- json.encode --
+
 local statusVisited
 local statusBuilder
+local statusDep
+local statusOpt
+
+local defaultOpt = {
+    newline = "",
+    indent = "",
+}
+defaultOpt.__index = defaultOpt
 
 local encode_map = {}
 
@@ -59,23 +123,12 @@ for i = 0, 31 do
     end
 end
 
-local function encode(v)
-    local res = encode_map[type(v)](v)
-    statusBuilder[#statusBuilder+1] = res
-end
-
 encode_map["nil"] = function ()
     return "null"
 end
 
 local function encode_string(v)
-    return string_gsub(v, '[\0-\31\\"]', encode_escape_map)
-end
-
-function encode_map.string(v)
-    statusBuilder[#statusBuilder+1] = '"'
-    statusBuilder[#statusBuilder+1] = encode_string(v)
-    return '"'
+    return string_gsub(v, '[%z\1-\31\\"]', encode_escape_map)
 end
 
 local function convertreal(v)
@@ -97,6 +150,9 @@ function encode_map.number(v)
     if v ~= v or v <= tiny or v >= huge then
         error("unexpected number value '" .. tostring(v) .. "'")
     end
+    if math_type(v) == "integer" then
+        return string_format('%d', v)
+    end
     return convertreal(v)
 end
 
@@ -105,68 +161,6 @@ function encode_map.boolean(v)
         return "true"
     else
         return "false"
-    end
-end
-
-function encode_map.table(t)
-    local first_val = next(t)
-    if first_val == nil then
-        if getmetatable(t) == json.object then
-            return "{}"
-        else
-            return "[]"
-        end
-    end
-    if statusVisited[t] then
-        error("circular reference")
-    end
-    statusVisited[t] = true
-    if type(first_val) == 'string' then
-        local keys = {}
-        for k in next, t do
-            if type(k) ~= "string" then
-                error("invalid table: mixed or invalid key types")
-            end
-            keys[#keys+1] = k
-        end
-        table_sort(keys)
-        local k = keys[1]
-        statusBuilder[#statusBuilder+1] = '{"'
-        statusBuilder[#statusBuilder+1] = encode_string(k)
-        statusBuilder[#statusBuilder+1] = '":'
-        encode(t[k])
-        for i = 2, #keys do
-            local k = keys[i]
-            statusBuilder[#statusBuilder+1] = ',"'
-            statusBuilder[#statusBuilder+1] = encode_string(k)
-            statusBuilder[#statusBuilder+1] = '":'
-            encode(t[k])
-        end
-        statusVisited[t] = nil
-        return "}"
-    else
-        local count = 0
-        local max = 0
-        for k in next, t do
-            if math_type(k) ~= "integer" or k <= 0 then
-                error("invalid table: mixed or invalid key types")
-            end
-            count = count + 1
-            if max < k then
-                max = k
-            end
-        end
-        if not json.supportSparseArray and count ~= max then
-            error("sparse array are not supported")
-        end
-        statusBuilder[#statusBuilder+1] = "["
-        encode(t[1])
-        for i = 2, max do
-            statusBuilder[#statusBuilder+1] = ","
-            encode(t[i])
-        end
-        statusVisited[t] = nil
-        return "]"
     end
 end
 
@@ -181,15 +175,120 @@ encode_map[ "function" ] = encode_unexpected
 encode_map[ "userdata" ] = encode_unexpected
 encode_map[ "thread"   ] = encode_unexpected
 
-function json.encode(v)
+local function encode_newline()
+    statusBuilder[#statusBuilder+1] = statusOpt.newline..string_rep(statusOpt.indent, statusDep)
+end
+
+local function encode(v)
+    local res = encode_map[type(v)](v)
+    statusBuilder[#statusBuilder+1] = res
+end
+
+function encode_map.string(v)
+    statusBuilder[#statusBuilder+1] = '"'
+    statusBuilder[#statusBuilder+1] = encode_string(v)
+    return '"'
+end
+
+function encode_map.table(t)
+    local first_val = next(t)
+    if first_val == nil then
+        if getmetatable(t) == objectMt then
+            return "{}"
+        else
+            return "[]"
+        end
+    end
+    if statusVisited[t] then
+        error("circular reference")
+    end
+    statusVisited[t] = true
+    if type(first_val) == 'string' then
+        local key = {}
+        for k in next, t do
+            if type(k) ~= "string" then
+                error("invalid table: mixed or invalid key types")
+            end
+            key[#key+1] = k
+        end
+        table_sort(key)
+        statusBuilder[#statusBuilder+1] = "{"
+        statusDep = statusDep + 1
+        encode_newline()
+        local k = key[1]
+        statusBuilder[#statusBuilder+1] = '"'
+        statusBuilder[#statusBuilder+1] = encode_string(k)
+        statusBuilder[#statusBuilder+1] = '": '
+        encode(t[k])
+        for i = 2, #key do
+            local k = key[i]
+            statusBuilder[#statusBuilder+1] = ","
+            encode_newline()
+            statusBuilder[#statusBuilder+1] = '"'
+            statusBuilder[#statusBuilder+1] = encode_string(k)
+            statusBuilder[#statusBuilder+1] = '": '
+            encode(t[k])
+        end
+        statusDep = statusDep - 1
+        encode_newline()
+        statusVisited[t] = nil
+        return "}"
+    elseif json.supportSparseArray then
+        local max = 0
+        for k in next, t do
+            if math_type(k) ~= "integer" or k <= 0 then
+                error("invalid table: mixed or invalid key types")
+            end
+            if max < k then
+                max = k
+            end
+        end
+        statusBuilder[#statusBuilder+1] = "["
+        statusDep = statusDep + 1
+        encode_newline()
+        encode(t[1])
+        for i = 2, max do
+            statusBuilder[#statusBuilder+1] = ","
+            encode_newline()
+            encode(t[i])
+        end
+        statusDep = statusDep - 1
+        encode_newline()
+        statusVisited[t] = nil
+        return "]"
+    else
+        if t[1] == nil then
+            error("invalid table: mixed or invalid key types")
+        end
+        statusBuilder[#statusBuilder+1] = "["
+        statusDep = statusDep + 1
+        encode_newline()
+        encode(t[1])
+        local count = 2
+        while t[count] ~= nil do
+            statusBuilder[#statusBuilder+1] = ","
+            encode_newline()
+            encode(t[count])
+            count = count + 1
+        end
+        if next(t, count-1) ~= nil then
+            error("invalid table: mixed or invalid key types")
+        end
+        statusDep = statusDep - 1
+        encode_newline()
+        statusVisited[t] = nil
+        return "]"
+    end
+end
+
+function json.encode(v, option)
     statusVisited = {}
     statusBuilder = {}
+    statusDep = 0
+    statusOpt = option and setmetatable(option, defaultOpt) or defaultOpt
     encode(v)
     return table_concat(statusBuilder)
 end
-
-json._encode_map = encode_map
-json._encode_string = encode_string
 
 -- json.decode --
 
@@ -217,36 +316,50 @@ local function find_line()
 end
 
 local function decode_error(msg)
-    error(string_format("ERROR: %s at line %d col %d", msg, find_line()))
+    error(string_format("ERROR: %s at line %d col %d", msg, find_line()), 2)
 end
 
 local function get_word()
     return string_match(statusBuf, "^[^ \t\r\n%]},]*", statusPos)
 end
 
-local function next_byte()
-    local pos = string_find(statusBuf, "[^ \t\r\n]", statusPos)
-    if pos then
-        statusPos = pos
-        return string_byte(statusBuf, pos)
+local function skip_comment(b)
+    if b ~= 47 --[[ '/' ]] then
+        return
     end
-    return -1
-end
-
-local function consume_byte(c)
-    local _, pos = string_find(statusBuf, c, statusPos)
-    if pos then
-        statusPos = pos + 1
+    local c = string_byte(statusBuf, statusPos+1)
+    if c == 42 --[[ '*' ]] then
+        -- block comment
+        local pos = string_find(statusBuf, "*/", statusPos)
+        if pos then
+            statusPos = pos + 2
+        else
+            statusPos = #statusBuf + 1
+        end
+        return true
+    elseif c == 47 --[[ '/' ]] then
+        -- line comment
+        local pos = string_find(statusBuf, "[\r\n]", statusPos)
+        if pos then
+            statusPos = pos
+        else
+            statusPos = #statusBuf + 1
+        end
         return true
     end
 end
 
-local function expect_byte(c)
-    local _, pos = string_find(statusBuf, c, statusPos)
-    if not pos then
-        decode_error(string_format("expected '%s'", string_sub(c, #c)))
+local function next_byte()
+    local pos = string_find(statusBuf, "[^ \t\r\n]", statusPos)
+    if pos then
+        statusPos = pos
+        local b = string_byte(statusBuf, pos)
+        if not skip_comment(b) then
+            return b
+        end
+        return next_byte()
     end
-    statusPos = pos
+    return -1
 end
 
 local function decode_unicode_surrogate(s1, s2)
@@ -262,7 +375,7 @@ local function decode_string()
     local has_escape = false
     local i = statusPos + 1
     while true do
-        i = string_find(statusBuf, '["\\\0-\31]', i)
+        i = string_find(statusBuf, '[%z\1-\31\\"]', i)
         if not i then
             decode_error "expected closing quote for string"
         end
@@ -310,7 +423,7 @@ local function decode_number()
         decode_error("invalid number '" .. get_word() .. "'")
     end
     if c ~= '' then
-        num = string_match(statusBuf, '^([^eE]*[eE][-+]?[0-9]+)[ \t\r\n%]},]', statusPos)
+        num = string_match(statusBuf, '^([^eE]*[eE][-+]?[0-9]+)[ \t\r\n%]},/]', statusPos)
         if not num then
             decode_error("invalid number '" .. get_word() .. "'")
         end
@@ -325,7 +438,7 @@ local function decode_number_zero()
         decode_error("invalid number '" .. get_word() .. "'")
     end
     if c ~= '' then
-        num = string_match(statusBuf, '^([^eE]*[eE][-+]?[0-9]+)[ \t\r\n%]},]', statusPos)
+        num = string_match(statusBuf, '^([^eE]*[eE][-+]?[0-9]+)[ \t\r\n%]},/]', statusPos)
         if not num then
             decode_error("invalid number '" .. get_word() .. "'")
         end
@@ -374,7 +487,9 @@ end
 local function decode_array()
     statusPos = statusPos + 1
     local res = {}
-    if consume_byte "^[ \t\r\n]*%]" then
+    local chr = next_byte()
+    if chr == 93 --[[ ']' ]] then
+        statusPos = statusPos + 1
         return res
     end
     statusTop = statusTop + 1
@@ -386,8 +501,10 @@ end
 local function decode_object()
     statusPos = statusPos + 1
     local res = {}
-    if consume_byte "^[ \t\r\n]*}" then
-        return setmetatable(res, json.object)
+    local chr = next_byte()
+    if chr == 125 --[[ ']' ]] then
+        statusPos = statusPos + 1
+        return json.createEmptyObject()
     end
     statusTop = statusTop + 1
     statusAry[statusTop] = false
@@ -437,9 +554,10 @@ local function decode_item()
     if statusAry[top] then
         ref[#ref+1] = decode()
     else
-        expect_byte '^[ \t\r\n]*"'
         local key = decode_string()
-        expect_byte '^[ \t\r\n]*:'
+        if next_byte() ~= 58 --[[ ':' ]] then
+            decode_error "expected ':'"
+        end
         statusPos = statusPos + 1
         ref[key] = decode()
     end
@@ -447,12 +565,19 @@ local function decode_item()
         repeat
             local chr = next_byte(); statusPos = statusPos + 1
             if chr == 44 --[[ "," ]] then
-                return
-            end
-            if statusAry[statusTop] then
-                if chr ~= 93 --[[ "]" ]] then decode_error "expected ']' or ','" end
+                local c = next_byte()
+                if statusAry[statusTop] then
+                    if c ~= 93 --[[ "]" ]] then return end
+                else
+                    if c ~= 125 --[[ "}" ]] then return end
+                end
+                statusPos = statusPos + 1
             else
-                if chr ~= 125 --[[ "}" ]] then decode_error "expected '}' or ','" end
+                if statusAry[statusTop] then
+                    if chr ~= 93 --[[ "]" ]] then decode_error "expected ']' or ','" end
+                else
+                    if chr ~= 125 --[[ "}" ]] then decode_error "expected '}' or ','" end
+                end
             end
             statusTop = statusTop - 1
         until statusTop == 0
@@ -466,6 +591,9 @@ function json.decode(str)
     statusBuf = str
     statusPos = 1
     statusTop = 0
+    if next_byte() == -1 then
+        return json.null
+    end
     local res = decode()
     while statusTop > 0 do
         decode_item()
@@ -475,8 +603,5 @@ function json.decode(str)
     end
     return res
 end
-
--- Generate a lightuserdata
-json.null = debug.upvalueid(decode, 1)
 
 return json
