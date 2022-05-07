@@ -44,7 +44,15 @@ function import(relatedFilePath)
     -- 找到当前文件的路径
     local info = debug.getinfo(2)
     local currentFilePath = info.source --info.short_src
-    local currentFilePathArr = split(currentFilePath, "/")
+    ---@type string[]
+    local currentFilePathArr = nil
+    if string.find(currentFilePath, "/") ~= nil then
+        currentFilePathArr = split(currentFilePath, "/")
+    elseif string.find(currentFilePath, ".") ~= nil then
+        currentFilePathArr = split(currentFilePath, ".")
+    else
+        assert(false, "invalidate path")
+    end
     -- 把当前文件名从数组中剔除
     local _ = table.remove(currentFilePathArr)
 
@@ -65,7 +73,7 @@ function import(relatedFilePath)
         table.insert(relatedFilePaths, reverseFilePaths[i])
     end
 
-    assert((#currentFilePathArr) >= (#relatedArr - #relatedFilePath), "相对路径错误")
+    assert((#currentFilePathArr) >= (#relatedArr - #relatedFilePath), "invalidate relative path")
 
     -- 发现'..'则把当前文件中的路径删除，最后再把相路径中的部分拼接起来
     for i = 1, #relatedArr do
