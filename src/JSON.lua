@@ -1,6 +1,6 @@
 --[[
     https://github.com/sumneko/lua-language-server/blob/master/script/jsonc.lua
-]]
+--]]
 
 local type = type
 local next = next
