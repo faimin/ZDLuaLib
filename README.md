@@ -1,7 +1,8 @@
 # ZDLuaLab
+
 Lua tools
 
-#### Import
+## Import
 
 require_relative, support for multiple points
 
@@ -14,3 +15,16 @@ import("./GiftWishPresenter")
 --2.
 import(".../ActivityDragon/views/ActivityDragonAttackView")
 ```
+
+
+## Recommend
+
+- [luajit2](https://github.com/openresty/luajit2)
+
+- [lua-language-server](https://github.com/sumneko/lua-language-server)
+
+- [Lua-C API简介](https://www.cnblogs.com/orangeform/archive/2012/07/18/2433428.html)
+
+- [Lua调用C](https://www.cnblogs.com/orangeform/archive/2012/07/23/2469902.html)
+
+- [C调用Lua](https://www.cnblogs.com/orangeform/archive/2012/07/20/2460634.html)
