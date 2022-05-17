@@ -1,0 +1,82 @@
+--- Project: ${PROJECT_NAME}
+--- Created by Zero.D.Saber.
+--- DateTime: ${DATE} ${TIME}
+---
+--- Class Introduce: ${NAME}
+---
+
+local ${NAME} = {}
+
+function ${NAME}:new()
+    local instance = setmetatable({}, self)
+    self.__index = self
+
+    instance:init()
+
+    return instance
+end
+
+function ${NAME}:init()
+    self:initData()
+    self:initPresenter()
+    self:initView()
+    self:initActions()
+
+    return self
+end
+
+-----------------------------------------------
+
+--- UI
+function ${NAME}:initView()
+    --所有视图的父视图
+    --[[
+    self.contentView = View()
+            :width(MeasurementType.MATCH_PARENT)
+            :height(MeasurementType.MATCH_PARENT)
+            :bgColor(Color(255, 255, 255, 1))
+    --]]
+
+    return self
+end
+
+--- Action
+function ${NAME}:initActions()
+    --
+    return self
+end
+
+--- Data
+function ${NAME}:initData()
+    self.dataSource = {}
+    return self
+end
+
+--- Presenter
+function ${NAME}:initPresenter()
+    --self.presenter = require("")
+    return self
+end
+
+--- Delegate
+function ${NAME}:setDelegate(delegate)
+    self.delegate = delegate
+    return self
+end
+
+--- Reload
+function ${NAME}:reloadData()
+    --self.presenter:reloadData()
+    return self
+end
+
+--- Fill Data
+function ${NAME}:bindModel(model)
+    if not model then
+        return self
+    end
+
+    return self
+end
+
+return ${NAME}
