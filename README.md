@@ -19,6 +19,8 @@ import(".../ActivityDragon/views/ActivityDragonAttackView")
 
 ## Recommend
 
+- [Lua 5.3 参考手册](https://cloudwu.github.io/lua53doc/contents.html#contents)
+
 - [luajit2](https://github.com/openresty/luajit2)
 
 - [lua-language-server](https://github.com/sumneko/lua-language-server)
