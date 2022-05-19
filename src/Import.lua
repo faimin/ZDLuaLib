@@ -2,7 +2,7 @@
 --- Created by Zero.D.Saber.
 --- DateTime: 2022/4/22 18:00
 ---
---- Class Introduce: Import
+--- Class Introduce: require_relative
 ---
 ---
 
@@ -24,7 +24,7 @@ end
 ---@author Zero.D.Saber
 ---@param relatedFilePath string
 ---@return any
-function import(relatedFilePath)
+function require_relative(relatedFilePath)
     if not relatedFilePath or type(relatedFilePath) ~= "string" then
         assert(false)
     end
@@ -93,10 +93,3 @@ function import(relatedFilePath)
     return require(realPath)
 end
 
----以相对路径的方式引用模块
----@author Zero.D.Saber
----@param relatedFilePath string
----@return any
-function require_relative(relatedFilePath)
-    return import(relatedFilePath)
-end
