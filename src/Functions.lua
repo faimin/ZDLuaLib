@@ -33,6 +33,32 @@ function table.filter(t, fn)
     return t
 end
 
+---table判空
+---@param t table
+---@return boolean
+function table.isEmpty(t)
+    return t ~= nil and next(t) == nil or t == nil
+end
+
+---判断table是否是数组
+---@param t table
+---@return boolean
+function table.isArray(t)
+    if not t then
+        return false
+    end
+
+    local isArray, index = true, 1
+    for key, value in pairs(t) do
+        if t[index] == nil then
+            isArray = false
+            break
+        end
+        index = index + 1
+    end
+    return isArray
+end
+
 local function outputValue(value)
     if not value then
         return "nil"
