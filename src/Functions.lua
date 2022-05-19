@@ -11,7 +11,7 @@
 
 --- map字典
 ---@param t table
----@param fn function func(k, v)
+---@param fn fun(k, v):any
 ---@return table
 function table.map(t, fn)
     for k, v in pairs(t) do
@@ -22,7 +22,7 @@ end
 
 --- 过滤table字典中的数据
 ---@param t table
----@param fn function func(k, v)
+---@param fn fun(k, v):boolean
 ---@return table
 function table.filter(t, fn)
     for k, v in pairs(t) do
@@ -95,42 +95,42 @@ function table.print(t, tname)
         return
     end
 
-    local _deep_count = 0   -- 深度
+    local _deep_count = 0 -- 深度
     local printed_tables = {}
-    local t_path = {}   -- 目录
-    local outstr = ""   -- 输出字符串
+    local t_path = {} -- 目录
+    local outstr = "" -- 输出字符串
 
-    local print_one_table   -- 【关键函数】
+    local print_one_table -- 【关键函数】
     print_one_table = function(tb, tb_name)
 
         local tb_name = tb_name or "table"
         table.insert(t_path, tb_name)
         local tpath = ""
         for i, pname in ipairs(t_path) do
-            tpath = tpath.."."..pname
+            tpath = tpath .. "." .. pname
         end
 
         printed_tables[tb] = tpath
         _deep_count = _deep_count + 1
         local str = ""
-        local tab = string.rep(" ", _deep_count*4)  --返回重复4次空格的字符串
+        local tab = string.rep(" ", _deep_count * 4) --返回重复4次空格的字符串
         outstr = outstr .. string.format("\n%s  {\n", tab);
         for k, v in pairs(tb) do
             if type(v) == "table" then
                 if printed_tables[v] then
                     str = string.format("%s    %s = [ %s ]", tab, outputValue(k), printed_tables[v])
-                    outstr = outstr..str.."\n"
+                    outstr = outstr .. str .. "\n"
                 else
                     str = string.format("%s    %s = ", tab, outputValue(k))
-                    outstr = outstr..str
+                    outstr = outstr .. str
                     print_one_table(v, tostring(k))
                 end
             else
                 str = string.format("%s    %s = %s", tab, outputValue(k), outputValue(v))
-                outstr = outstr..str.."\n"
+                outstr = outstr .. str .. "\n"
             end
         end
-        outstr = outstr..tab.."  }\n"
+        outstr = outstr .. tab .. "  }\n"
         table.remove(t_path)
         _deep_count = _deep_count - 1
     end
@@ -171,7 +171,7 @@ function string.utf8len(self)
     local len  = string.len(self)
     local left = len
     local cnt  = 0
-    local arr  = {0, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc}
+    local arr  = { 0, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc }
     while left ~= 0 do
         local tmp = string.byte(self, -left)
         local i = #arr
@@ -201,21 +201,21 @@ function string.length(self)
     local i = 1
     while (i <= lenInByte) do
         local curByte = string.byte(self, i)
-        
+
         local byteCount = 1
         if curByte > 0 and curByte <= 127 then
-            byteCount = 1                                               --1字节字符
+            byteCount = 1 --1字节字符
         elseif curByte >= 192 and curByte < 223 then
-            byteCount = 2                                               --双字节字符
+            byteCount = 2 --双字节字符
         elseif curByte >= 224 and curByte <= 239 then
-            byteCount = 3                                               --汉字
+            byteCount = 3 --汉字
         elseif curByte >= 240 and curByte <= 247 then
-            byteCount = 4                                               --4字节字符
+            byteCount = 4 --4字节字符
         end
 
         local char = string.sub(self, i, i + byteCount - 1)
-        i = i + byteCount                                               -- 重置下一字节的索引
-        charCount = charCount + 1                                       -- 字符的个数（长度）
+        i = i + byteCount -- 重置下一字节的索引
+        charCount = charCount + 1 -- 字符的个数（长度）
     end
 
     return charCount
