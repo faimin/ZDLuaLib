@@ -225,14 +225,14 @@ end
 --- function
 ----------------------------------------------------
 
---- 打印函数位置
-function LogFuncPosition()
+--- print position 
+function LogWithPosition(...)
     local info = debug.getinfo(2)
     local line = info.currentline
-    local file = info.short_src
+    local file = info.source
     local func = info.name
     local positionString = string.format("file = %s, line = #%d, func = %s", file, line, func)
-    print(positionString)
+    print(positionString, ...)
 end
 
 --- shallowCopy
