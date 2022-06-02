@@ -4,7 +4,17 @@
 -----
 ----- Class Introduce: 面向对象(继承)
 
-local MT = {}
+local JSON = require("JSON")
+
+local MT = {
+    __tostring = function(t)
+        if JSON then
+            return JSON.encode(t)
+        else
+            return tostring(v)
+        end
+    end
+}
 MT.__index = MT
 MT.__call = function(self, ...)
     return self:new(...)
